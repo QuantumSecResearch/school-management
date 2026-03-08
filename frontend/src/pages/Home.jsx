@@ -1,6 +1,4 @@
 
 export default function Home() {
-    return <>
-    Hi from home
-    </>
+    return <>hi from home</>
 }
