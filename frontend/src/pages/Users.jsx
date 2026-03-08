@@ -1,5 +1,4 @@
 export default function Users() {
-    return <>
-    Hi from Users page
-    </>;
+
+    return <>hi from users</>
 }
