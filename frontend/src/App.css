@@ -1,0 +1,45 @@
+.app-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #f6f8fb;
+  color: #0f172a;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.app-header {
+  border-bottom: 1px solid #e2e8f0;
+  background: #ffffff;
+  padding: 14px 20px;
+}
+
+.app-nav {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.app-nav a {
+  text-decoration: none;
+  color: #1e293b;
+  background: #e2e8f0;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-weight: 600;
+}
+
+.app-nav a:hover {
+  background: #cbd5e1;
+}
+
+.app-main {
+  flex: 1;
+  padding: 20px;
+}
+
+.app-footer {
+  border-top: 1px solid #e2e8f0;
+  background: #ffffff;
+  padding: 12px 20px;
+  color: #475569;
+}
