@@ -62,7 +62,7 @@ export default function Layout() {
         </section>
       </main>
       <footer className="mx-auto w-full max-w-6xl px-4 pb-6 text-sm text-muted-foreground">
-        Built with React, Vite and shadcn/ui
+        
       </footer>
     </div>
   );
