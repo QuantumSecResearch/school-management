@@ -7,26 +7,38 @@ use Illuminate\Http\Request;
 
 class StudentController extends Controller
 {
-    // GET /api/students — liste tous les students
-    public function index()
+    // GET /api/students?search=...&classroom_id=...&page=1
+    public function index(Request $request)
     {
-        return response()->json(Student::latest()->get());
+        $search      = $request->query('search');
+        $classroomId = $request->query('classroom_id');
+
+        $students = Student::with('classroom:id,name')
+            ->latest()
+            ->when($search, function ($query) use ($search) {
+                $query->where(function ($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%")
+                      ->orWhere('email', 'like', "%{$search}%");
+                });
+            })
+            ->when($classroomId, fn($q) => $q->where('classroom_id', $classroomId))
+            ->paginate(10);
+
+        return response()->json($students);
     }
 
-    // POST /api/students — créer un student
+    // POST /api/students
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'name'       => 'required|string|max:255',
-            'email'      => 'required|email|unique:students,email',
-            'phone'      => 'nullable|string|max:20',
-            'class'      => 'required|string|max:100',
-            'birth_date' => 'nullable|date',
+            'name'         => 'required|string|max:255',
+            'email'        => 'required|email|unique:students,email',
+            'phone'        => 'nullable|string|max:20',
+            'classroom_id' => 'nullable|exists:classrooms,id',
+            'birth_date'   => 'nullable|date',
         ]);
 
-        $student = Student::create($validated);
-
-        return response()->json($student, 201);
+        return response()->json(Student::create($validated), 201);
     }
 
     // GET /api/students/{id} — afficher un student
@@ -35,20 +47,20 @@ class StudentController extends Controller
         return response()->json($student);
     }
 
-    // PUT /api/students/{id} — modifier un student
+    // PUT /api/students/{id}
     public function update(Request $request, Student $student)
     {
         $validated = $request->validate([
-            'name'       => 'required|string|max:255',
-            'email'      => 'required|email|unique:students,email,' . $student->id,
-            'phone'      => 'nullable|string|max:20',
-            'class'      => 'required|string|max:100',
-            'birth_date' => 'nullable|date',
+            'name'         => 'required|string|max:255',
+            'email'        => 'required|email|unique:students,email,' . $student->id,
+            'phone'        => 'nullable|string|max:20',
+            'classroom_id' => 'nullable|exists:classrooms,id',
+            'birth_date'   => 'nullable|date',
         ]);
 
         $student->update($validated);
 
-        return response()->json($student);
+        return response()->json($student->load('classroom:id,name'));
     }
 
     // DELETE /api/students/{id} — supprimer un student

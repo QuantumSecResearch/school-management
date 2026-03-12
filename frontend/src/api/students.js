@@ -1,7 +1,12 @@
 import api from "./axios";
 
-// GET /api/students → liste tous les students
-export const getStudents = () => api.get("/api/students");
+// GET /api/students?page=1&search=...&class=... → liste filtrée et paginée
+export const getStudents = (page = 1, search = "", studentClass = "") => {
+  const params = new URLSearchParams({ page });
+  if (search)       params.append("search", search);
+  if (studentClass) params.append("class", studentClass);
+  return api.get(`/api/students?${params.toString()}`);
+};
 
 // GET /api/students/:id → un seul student
 export const getStudent = (id) => api.get(`/api/students/${id}`);

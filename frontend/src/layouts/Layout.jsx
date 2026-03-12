@@ -57,25 +57,41 @@ export default function Layout() {
             </NavLink>
 
             {user ? (
-              // Connecté : afficher Students
-              <NavLink
-                to="/students"
-                className={({ isActive }) =>
+              // Connecté : Students + Teachers
+              <>
+                <NavLink to="/students" className={({ isActive }) =>
                   cn("rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
                     isActive ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground")
-                }>
-                Students
-              </NavLink>
+                }>Students</NavLink>
+                <NavLink to="/teachers" className={({ isActive }) =>
+                  cn("rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
+                    isActive ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground")
+                }>Teachers</NavLink>
+                <NavLink to="/classrooms" className={({ isActive }) =>
+                  cn("rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
+                    isActive ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground")
+                }>Classes</NavLink>
+              </>
             ) : (
-              // Non connecté : afficher Login
-              <NavLink
-                to="/login"
-                className={({ isActive }) =>
-                  cn("rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
-                    isActive ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground")
-                }>
-                Login
-              </NavLink>
+              // Non connecté : afficher Login + Register
+              <>
+                <NavLink
+                  to="/login"
+                  className={({ isActive }) =>
+                    cn("rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
+                      isActive ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground")
+                  }>
+                  Login
+                </NavLink>
+                <NavLink
+                  to="/register"
+                  className={({ isActive }) =>
+                    cn("rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
+                      isActive ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground")
+                  }>
+                  Register
+                </NavLink>
+              </>
             )}
           </nav>
 
