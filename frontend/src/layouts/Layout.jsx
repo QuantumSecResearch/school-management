@@ -3,6 +3,7 @@ import { NavLink, Outlet } from "react-router";
 import { Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import logo from "@/assets/react.svg";
 
 const navItems = [
   { to: "/", label: "Home", end: true },
@@ -27,8 +28,20 @@ export default function Layout() {
     <div className="min-h-screen bg-background text-foreground">
       <div className="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(circle_at_15%_10%,rgba(56,189,248,0.16),transparent_40%),radial-gradient(circle_at_80%_0%,rgba(16,185,129,0.12),transparent_35%)]" />
       <header className="sticky top-0 z-30 border-b bg-background/85 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-          <div className="text-lg font-semibold tracking-tight">School Management</div>
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3">
+          <NavLink to="/" className="flex min-w-0 items-center gap-3">
+            <img
+              src={logo}
+              alt="School Management Logo"
+              className="h-9 w-9 rounded-md border bg-card p-1.5 shadow-sm"
+            />
+            <div className="min-w-0">
+              <p className="truncate text-base font-semibold leading-none tracking-tight sm:text-lg">
+                School Management
+              </p>
+              <p className="truncate text-xs text-muted-foreground">Student Platform</p>
+            </div>
+          </NavLink>
           <nav className="flex items-center gap-2 rounded-xl border bg-card/70 p-1.5 shadow-sm">
             {navItems.map((item) => (
               <NavLink
@@ -61,9 +74,7 @@ export default function Layout() {
           <Outlet />
         </section>
       </main>
-      <footer className="mx-auto w-full max-w-6xl px-4 pb-6 text-sm text-muted-foreground">
-        
-      </footer>
+      <footer className="mx-auto w-full max-w-6xl px-4 pb-6 text-sm text-muted-foreground" />
     </div>
   );
 }
