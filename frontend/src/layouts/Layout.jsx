@@ -1,18 +1,15 @@
 import { useEffect, useState } from "react";
-import { NavLink, Outlet } from "react-router";
-import { Moon, Sun } from "lucide-react";
+import { NavLink, Outlet, useNavigate } from "react-router";
+import { Moon, Sun, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import logo from "@/assets/react.svg";
-
-const navItems = [
-  { to: "/", label: "Home", end: true },
-  { to: "/login", label: "Login" },
-  { to: "/register", label: "Register" },
-  { to: "/users", label: "Users" },
-];
+import { useAuth } from "@/context/AuthContext";
 
 export default function Layout() {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
   const [theme, setTheme] = useState(() => {
     const savedTheme = window.localStorage.getItem("theme");
     if (savedTheme === "light" || savedTheme === "dark") return savedTheme;
@@ -23,6 +20,11 @@ export default function Layout() {
     document.documentElement.classList.toggle("dark", theme === "dark");
     window.localStorage.setItem("theme", theme);
   }, [theme]);
+
+  async function handleLogout() {
+    await logout();
+    navigate("/login");
+  }
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -42,31 +44,60 @@ export default function Layout() {
               <p className="truncate text-xs text-muted-foreground">Student Platform</p>
             </div>
           </NavLink>
+
           <nav className="flex items-center gap-2 rounded-xl border bg-card/70 p-1.5 shadow-sm">
-            {navItems.map((item) => (
+            <NavLink
+              to="/"
+              end
+              className={({ isActive }) =>
+                cn("rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
+                  isActive ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground")
+              }>
+              Home
+            </NavLink>
+
+            {user ? (
+              // Connecté : afficher Students
               <NavLink
-                key={item.to}
-                to={item.to}
-                end={item.end}
+                to="/students"
                 className={({ isActive }) =>
-                  cn(
-                    "rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
-                    isActive
-                      ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                  )
+                  cn("rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
+                    isActive ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground")
                 }>
-                {item.label}
+                Students
               </NavLink>
-            ))}
+            ) : (
+              // Non connecté : afficher Login
+              <NavLink
+                to="/login"
+                className={({ isActive }) =>
+                  cn("rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
+                    isActive ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground")
+                }>
+                Login
+              </NavLink>
+            )}
           </nav>
-          <Button
-            variant="outline"
-            size="icon"
-            aria-label="Toggle dark mode"
-            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
-            {theme === "dark" ? <Sun /> : <Moon />}
-          </Button>
+
+          <div className="flex items-center gap-2">
+            {user && (
+              <>
+                <span className="text-sm text-muted-foreground hidden sm:block">
+                  {user.name}
+                </span>
+                <Button variant="outline" size="icon" onClick={handleLogout} aria-label="Logout">
+                  <LogOut className="h-4 w-4" />
+                </Button>
+              </>
+            )}
+            <Button
+              variant="outline"
+              size="icon"
+              aria-label="Toggle dark mode"
+              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
+              {theme === "dark" ? <Sun /> : <Moon />}
+            </Button>
+          </div>
         </div>
       </header>
       <main className="mx-auto w-full max-w-6xl px-4 py-8">

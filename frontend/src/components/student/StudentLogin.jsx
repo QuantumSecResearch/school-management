@@ -3,8 +3,7 @@ import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigate } from "react-router";
-
-import api, { getCsrfCookie } from "@/api/axios";
+import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -23,32 +22,22 @@ const formSchema = z.object({
 
 export default function StudentLogin() {
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [serverError, setServerError] = useState("");
   const [loading, setLoading] = useState(false);
 
   const form = useForm({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      email: "",
-      password: "",
-    },
+    defaultValues: { email: "", password: "" },
   });
 
   async function onSubmit(values) {
     setServerError("");
     setLoading(true);
-
     try {
-      // Étape 1 : récupérer le cookie CSRF (obligatoire pour Sanctum)
-      await getCsrfCookie();
-
-      // Étape 2 : envoyer email + password au backend Laravel
-      await api.post("/login", values);
-
-      // ✅ succès → redirection vers le dashboard
-      navigate("/");
+      await login(values.email, values.password);
+      navigate("/students");
     } catch (error) {
-      // ❌ échec → on affiche le message d'erreur du backend
       const message = error.response?.data?.message || "Email ou mot de passe incorrect.";
       setServerError(message);
     } finally {
@@ -58,9 +47,8 @@ export default function StudentLogin() {
 
   return (
     <div className="max-w-md mx-auto mt-10 p-6 border rounded-xl space-y-6">
-      <h1 className="text-2xl font-bold">Student Login</h1>
+      <h1 className="text-2xl font-bold">Connexion</h1>
 
-      {/* message d'erreur venant du backend */}
       {serverError && (
         <p className="text-sm text-red-500 bg-red-50 border border-red-200 rounded p-3">
           {serverError}
@@ -76,13 +64,12 @@ export default function StudentLogin() {
               <FormItem>
                 <FormLabel>Email</FormLabel>
                 <FormControl>
-                  <Input placeholder="student@email.com" {...field} />
+                  <Input placeholder="admin@email.com" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
-
           <FormField
             control={form.control}
             name="password"
@@ -90,13 +77,12 @@ export default function StudentLogin() {
               <FormItem>
                 <FormLabel>Mot de passe</FormLabel>
                 <FormControl>
-                  <Input type="password" placeholder="******" {...field} />
+                  <Input type="password" placeholder="••••••••" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
-
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? "Connexion en cours..." : "Se connecter"}
           </Button>
