@@ -1,0 +1,67 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Schedule;
+use Illuminate\Http\Request;
+
+class ScheduleController extends Controller
+{
+    // GET /api/schedules?classroom_id=&teacher_id=
+    public function index(Request $request)
+    {
+        $schedules = Schedule::with(['classroom:id,name', 'teacher:id,name'])
+            ->when($request->classroom_id, fn($q) => $q->where('classroom_id', $request->classroom_id))
+            ->when($request->teacher_id,   fn($q) => $q->where('teacher_id',   $request->teacher_id))
+            ->orderByRaw("FIELD(day,'Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi')")
+            ->orderBy('start_time')
+            ->get();
+
+        return response()->json($schedules);
+    }
+
+    // POST /api/schedules
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'classroom_id' => 'required|exists:classrooms,id',
+            'teacher_id'   => 'nullable|exists:teachers,id',
+            'subject'      => 'required|string|max:100',
+            'day'          => 'required|in:Lundi,Mardi,Mercredi,Jeudi,Vendredi,Samedi',
+            'start_time'   => 'required|date_format:H:i',
+            'end_time'     => 'required|date_format:H:i|after:start_time',
+            'color'        => 'nullable|string|max:20',
+        ]);
+
+        $schedule = Schedule::create($validated);
+        $schedule->load(['classroom:id,name', 'teacher:id,name']);
+
+        return response()->json($schedule, 201);
+    }
+
+    // PUT /api/schedules/{schedule}
+    public function update(Request $request, Schedule $schedule)
+    {
+        $validated = $request->validate([
+            'classroom_id' => 'sometimes|exists:classrooms,id',
+            'teacher_id'   => 'nullable|exists:teachers,id',
+            'subject'      => 'sometimes|string|max:100',
+            'day'          => 'sometimes|in:Lundi,Mardi,Mercredi,Jeudi,Vendredi,Samedi',
+            'start_time'   => 'sometimes|date_format:H:i',
+            'end_time'     => 'sometimes|date_format:H:i',
+            'color'        => 'nullable|string|max:20',
+        ]);
+
+        $schedule->update($validated);
+        $schedule->load(['classroom:id,name', 'teacher:id,name']);
+
+        return response()->json($schedule);
+    }
+
+    // DELETE /api/schedules/{schedule}
+    public function destroy(Schedule $schedule)
+    {
+        $schedule->delete();
+        return response()->json(null, 204);
+    }
+}

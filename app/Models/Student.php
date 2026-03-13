@@ -15,6 +15,7 @@ class Student extends Model
         'phone',
         'classroom_id',
         'birth_date',
+        'user_id',
     ];
 
     protected $casts = [
@@ -25,6 +26,21 @@ class Student extends Model
     public function classroom()
     {
         return $this->belongsTo(Classroom::class);
+    }
+
+    public function grades()
+    {
+        return $this->hasMany(\App\Models\Grade::class);
+    }
+
+    public function invoices()
+    {
+        return $this->hasMany(\App\Models\Invoice::class);
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(\App\Models\User::class);
     }
 }
 

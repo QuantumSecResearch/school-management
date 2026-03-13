@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Teacher;
+use App\Models\User;
 use Illuminate\Http\Request;
 
 class TeacherController extends Controller
@@ -13,7 +14,8 @@ class TeacherController extends Controller
         $search  = $request->query('search');
         $subject = $request->query('subject');
 
-        $teachers = Teacher::latest()
+        $teachers = Teacher::select('id','user_id','name','email','phone','subject','status','created_at','updated_at')
+            ->latest()
             ->when($search, function ($query) use ($search) {
                 $query->where(function ($q) use ($search) {
                     $q->where('name', 'like', "%{$search}%")
@@ -68,5 +70,32 @@ class TeacherController extends Controller
         $teacher->delete();
 
         return response()->json(null, 204);
+    }
+
+    // POST /api/teachers/{id}/account — créer un compte professeur
+    public function createAccount(Request $request, Teacher $teacher)
+    {
+        if ($teacher->user_id) {
+            return response()->json(['error' => 'Ce professeur a déjà un compte utilisateur.'], 422);
+        }
+
+        $validated = $request->validate([
+            'email'    => 'required|email|unique:users,email',
+            'password' => 'required|min:6',
+        ]);
+
+        $user = User::create([
+            'name'     => $teacher->name,
+            'email'    => $validated['email'],
+            'password' => bcrypt($validated['password']),
+            'role'     => 'teacher',
+        ]);
+
+        $teacher->update(['user_id' => $user->id]);
+
+        return response()->json([
+            'message' => 'Compte professeur créé avec succès.',
+            'email'   => $user->email,
+        ], 201);
     }
 }

@@ -21,7 +21,25 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'role',
     ];
+
+    // Helpers de rôle
+    public function isAdmin(): bool   { return $this->role === 'admin'; }
+    public function isTeacher(): bool { return $this->role === 'teacher'; }
+    public function isStudent(): bool { return $this->role === 'student'; }
+
+    // Relation : un user peut être lié à un Teacher
+    public function teacher()
+    {
+        return $this->hasOne(\App\Models\Teacher::class);
+    }
+
+    // Relation : un user peut être lié à un Student
+    public function student()
+    {
+        return $this->hasOne(\App\Models\Student::class);
+    }
 
     /**
      * The attributes that should be hidden for serialization.

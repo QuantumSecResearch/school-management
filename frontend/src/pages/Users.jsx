@@ -1,14 +1,15 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router";
-import { getStudents, deleteStudent } from "@/api/students";
+import { useNavigate, Link } from "react-router";
+import { getStudents, deleteStudent, createStudentAccount } from "@/api/students";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useRole } from "@/context/useRole";
 
-// Liste des classes disponibles pour le filtre
 const CLASSES = ["3ème A", "3ème B", "Terminale A", "Terminale B", "2nde C", "1ère S"];
 
 export default function StudentsList() {
   const navigate = useNavigate();
+  const { isAdmin } = useRole();
   const [students, setStudents]       = useState([]);
   const [loading, setLoading]         = useState(true);
   const [error, setError]             = useState("");
@@ -44,6 +45,44 @@ export default function StudentsList() {
       .finally(() => setLoading(false));
   }, [page, debouncedSearch, filterClass]);
 
+  const [accountModal, setAccountModal] = useState(null); // student object
+  const [accountEmail, setAccountEmail]       = useState("");
+  const [accountPassword, setAccountPassword] = useState("");
+  const [accountLoading, setAccountLoading]   = useState(false);
+  const [accountError, setAccountError]       = useState("");
+  const [accountSuccess, setAccountSuccess]   = useState("");
+
+  async function handleCreateAccount(e) {
+    e.preventDefault();
+    setAccountLoading(true);
+    setAccountError("");
+    setAccountSuccess("");
+    try {
+      await createStudentAccount(accountModal.id, { email: accountEmail, password: accountPassword });
+      setAccountSuccess(`Compte créé ! Email : ${accountEmail}`);
+      // Recharge pour mettre à jour user_id
+      getStudents(page, debouncedSearch, filterClass).then((res) => {
+        setStudents(res.data.data);
+      });
+    } catch (err) {
+      setAccountError(err.response?.data?.error ?? err.response?.data?.errors?.email?.[0] ?? "Erreur lors de la création.");
+    } finally {
+      setAccountLoading(false);
+    }
+  }
+
+  function openModal(student) {
+    setAccountModal(student);
+    setAccountEmail(student.email ?? "");
+    setAccountPassword("");
+    setAccountError("");
+    setAccountSuccess("");
+  }
+
+  function closeModal() {
+    setAccountModal(null);
+  }
+
   async function handleDelete(id, name) {
     if (!window.confirm(`Supprimer l'étudiant "${name}" ?`)) return;
     try {
@@ -71,9 +110,11 @@ export default function StudentsList() {
           <h1 className="text-3xl font-semibold tracking-tight">Étudiants</h1>
           <p className="text-muted-foreground">{total} étudiant{total !== 1 ? "s" : ""} trouvé{total !== 1 ? "s" : ""}</p>
         </div>
-        <Button onClick={() => navigate("/students/create")}>
-          + Ajouter un étudiant
-        </Button>
+        {isAdmin && (
+          <Button onClick={() => navigate("/students/create")}>
+            + Ajouter un étudiant
+          </Button>
+        )}
       </div>
 
       {/* Barre de recherche + filtre classe */}
@@ -133,12 +174,26 @@ export default function StudentsList() {
                   <td className="px-4 py-3">{student.class}</td>
                   <td className="px-4 py-3 text-muted-foreground">{student.phone ?? "—"}</td>
                   <td className="px-4 py-3 text-right space-x-2">
-                    <Button variant="outline" size="sm" onClick={() => navigate(`/students/${student.id}/edit`)}>
-                      Modifier
-                    </Button>
-                    <Button variant="destructive" size="sm" onClick={() => handleDelete(student.id, student.name)}>
-                      Supprimer
-                    </Button>
+                    <Link to={`/students/${student.id}/grades`}
+                      className="inline-flex items-center rounded-md border px-2.5 py-1.5 text-xs font-medium hover:bg-muted transition-colors">
+                      📊 Notes
+                    </Link>
+                    {isAdmin && (
+                      <>
+                        <Button
+                          variant="outline" size="sm"
+                          onClick={() => openModal(student)}
+                          className={student.user_id ? "opacity-50 cursor-default" : ""}>
+                          {student.user_id ? "✅ Compte" : "👤 Créer compte"}
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => navigate(`/students/${student.id}/edit`)}>
+                          Modifier
+                        </Button>
+                        <Button variant="destructive" size="sm" onClick={() => handleDelete(student.id, student.name)}>
+                          Supprimer
+                        </Button>
+                      </>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -161,6 +216,62 @@ export default function StudentsList() {
           <Button variant="outline" size="sm" disabled={page === lastPage} onClick={() => setPage((p) => p + 1)}>
             Suivant →
           </Button>
+        </div>
+      )}
+
+      {/* Modal créer compte étudiant */}
+      {accountModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl border bg-card p-6 shadow-xl space-y-4">
+            <div>
+              <h2 className="text-xl font-semibold">Créer un compte étudiant</h2>
+              <p className="text-sm text-muted-foreground mt-1">Pour : <strong>{accountModal.name}</strong></p>
+            </div>
+
+            {accountModal.user_id ? (
+              <div className="rounded-lg bg-muted p-4 text-sm text-center text-muted-foreground">
+                ✅ Ce étudiant possède déjà un compte utilisateur.
+              </div>
+            ) : (
+              <form onSubmit={handleCreateAccount} className="space-y-3">
+                <div>
+                  <label className="text-sm font-medium mb-1 block">Email de connexion</label>
+                  <Input
+                    type="email"
+                    value={accountEmail}
+                    onChange={(e) => setAccountEmail(e.target.value)}
+                    placeholder="etudiant@ecole.ma"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium mb-1 block">Mot de passe (min. 6 caractères)</label>
+                  <Input
+                    type="password"
+                    value={accountPassword}
+                    onChange={(e) => setAccountPassword(e.target.value)}
+                    placeholder="••••••••"
+                    required
+                    minLength={6}
+                  />
+                </div>
+                {accountError   && <p className="text-sm text-red-500">{accountError}</p>}
+                {accountSuccess && <p className="text-sm text-emerald-600 font-medium">{accountSuccess}</p>}
+                <div className="flex justify-end gap-2 pt-2">
+                  <Button type="button" variant="outline" onClick={closeModal}>Annuler</Button>
+                  <Button type="submit" disabled={accountLoading}>
+                    {accountLoading ? "Création..." : "Créer le compte"}
+                  </Button>
+                </div>
+              </form>
+            )}
+
+            {accountModal.user_id && (
+              <div className="flex justify-end">
+                <Button variant="outline" onClick={closeModal}>Fermer</Button>
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>

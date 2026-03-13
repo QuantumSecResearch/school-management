@@ -2,9 +2,11 @@ import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router";
 import { getClassrooms, deleteClassroom } from "@/api/classrooms";
 import { Button } from "@/components/ui/button";
+import { useRole } from "@/context/useRole";
 
 export default function ClassroomsList() {
   const navigate = useNavigate();
+  const { isAdmin } = useRole();
   const [classrooms, setClassrooms] = useState([]);
   const [loading, setLoading]       = useState(true);
   const [error, setError]           = useState("");
@@ -36,9 +38,11 @@ export default function ClassroomsList() {
           <h1 className="text-3xl font-semibold tracking-tight">Classes</h1>
           <p className="text-muted-foreground">{classrooms.length} classe{classrooms.length !== 1 ? "s" : ""}</p>
         </div>
-        <Button onClick={() => navigate("/classrooms/create")}>
-          + Ajouter une classe
-        </Button>
+        {isAdmin && (
+          <Button onClick={() => navigate("/classrooms/create")}>
+            + Ajouter une classe
+          </Button>
+        )}
       </div>
 
       {classrooms.length === 0 ? (
@@ -79,12 +83,16 @@ export default function ClassroomsList() {
                 <Button asChild variant="secondary" size="sm" className="flex-1">
                   <Link to={`/classrooms/${classroom.id}`}>👁 Voir</Link>
                 </Button>
-                <Button variant="outline" size="sm" className="flex-1" onClick={() => navigate(`/classrooms/${classroom.id}/edit`)}>
-                  Modifier
-                </Button>
-                <Button variant="destructive" size="sm" onClick={() => handleDelete(classroom.id, classroom.name)}>
-                  Supprimer
-                </Button>
+                {isAdmin && (
+                  <>
+                    <Button variant="outline" size="sm" className="flex-1" onClick={() => navigate(`/classrooms/${classroom.id}/edit`)}>
+                      Modifier
+                    </Button>
+                    <Button variant="destructive" size="sm" onClick={() => handleDelete(classroom.id, classroom.name)}>
+                      Supprimer
+                    </Button>
+                  </>
+                )}
               </div>
             </div>
           ))}

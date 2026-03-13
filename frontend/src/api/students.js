@@ -19,3 +19,6 @@ export const updateStudent = (id, data) => api.put(`/api/students/${id}`, data);
 
 // DELETE /api/students/:id → supprimer un student
 export const deleteStudent = (id) => api.delete(`/api/students/${id}`);
+
+// POST /api/students/:id/account → créer un compte étudiant
+export const createStudentAccount = (id, data) => api.post(`/api/students/${id}/account`, data);

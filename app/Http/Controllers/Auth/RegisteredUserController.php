@@ -27,9 +27,11 @@ class RegisteredUserController extends Controller
         ]);
 
         $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
+            'name'     => $request->name,
+            'email'    => $request->email,
             'password' => Hash::make($request->string('password')),
+            // Premier compte créé = admin, les suivants = teacher
+            'role'     => User::count() === 0 ? 'admin' : 'teacher',
         ]);
 
         event(new Registered($user));
