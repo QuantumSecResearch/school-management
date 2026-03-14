@@ -1,30 +1,34 @@
 import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router";
 import { getStudents, deleteStudent, createStudentAccount } from "@/api/students";
+import { getClassrooms } from "@/api/classrooms";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useRole } from "@/context/useRole";
 
-const CLASSES = ["3ème A", "3ème B", "Terminale A", "Terminale B", "2nde C", "1ère S"];
-
 export default function StudentsList() {
   const navigate = useNavigate();
-  const { isAdmin } = useRole();
+  const { canManageAcademics: isAdmin } = useRole();
   const [students, setStudents]       = useState([]);
+  const [classrooms, setClassrooms]   = useState([]);
   const [loading, setLoading]         = useState(true);
   const [error, setError]             = useState("");
   const [page, setPage]               = useState(1);
   const [lastPage, setLastPage]       = useState(1);
   const [total, setTotal]             = useState(0);
-  const [search, setSearch]           = useState("");       // texte de recherche
-  const [filterClass, setFilterClass] = useState("");       // classe sélectionnée
-  const [debouncedSearch, setDebouncedSearch] = useState(""); // recherche après délai
+  const [search, setSearch]           = useState("");
+  const [filterClass, setFilterClass] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+
+  // Charge la liste des classes pour le filtre
+  useEffect(() => {
+    getClassrooms().then((res) => setClassrooms(res.data)).catch(() => {});
+  }, []);
 
   // Debounce : attend 400ms après que l'utilisateur arrête de taper
-  // Évite d'envoyer une requête à chaque lettre
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(search), 400);
-    return () => clearTimeout(timer); // annule le timer si l'utilisateur retape
+    return () => clearTimeout(timer);
   }, [search]);
 
   // Quand la recherche ou le filtre change → revenir à la page 1
@@ -130,8 +134,8 @@ export default function StudentsList() {
           onChange={(e) => setFilterClass(e.target.value)}
           className="rounded-md border bg-background px-3 py-2 text-sm">
           <option value="">Toutes les classes</option>
-          {CLASSES.map((c) => (
-            <option key={c} value={c}>{c}</option>
+          {classrooms.map((c) => (
+            <option key={c.id} value={String(c.id)}>{c.name}</option>
           ))}
         </select>
         {/* Bouton reset si un filtre est actif */}

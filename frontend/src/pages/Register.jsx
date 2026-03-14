@@ -4,12 +4,10 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigate } from "react-router";
 import { useAuth } from "@/context/AuthContext";
-import api, { getCsrfCookie } from "@/api/axios";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 
-// Validation : les 2 mots de passe doivent être identiques
 const formSchema = z.object({
   name:                  z.string().min(2, "Le nom doit contenir au moins 2 caractères"),
   email:                 z.string().email("Email invalide"),
@@ -22,7 +20,7 @@ const formSchema = z.object({
 
 export default function Register() {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { register } = useAuth();
   const [serverError, setServerError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -35,10 +33,9 @@ export default function Register() {
     setServerError("");
     setLoading(true);
     try {
-      await getCsrfCookie();               // étape 1 : cookie CSRF
-      await api.post("/register", values); // étape 2 : créer le compte
-      await login(values.email, values.password); // étape 3 : connecter
-      navigate("/students");
+      await register(values.name, values.email, values.password, values.password_confirmation);
+      // Redirige vers le dashboard — la page Dashboard affiche la bonne vue selon le rôle
+      navigate("/dashboard");
     } catch (error) {
       const msg = error.response?.data?.message || "Erreur lors de l'inscription.";
       setServerError(msg);

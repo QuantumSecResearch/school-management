@@ -1,10 +1,10 @@
 import api from "./axios";
 
-// GET /api/students?page=1&search=...&class=... → liste filtrée et paginée
-export const getStudents = (page = 1, search = "", studentClass = "") => {
+// GET /api/students?page=1&search=...&classroom_id=... → liste filtrée et paginée
+export const getStudents = (page = 1, search = "", classroomId = "") => {
   const params = new URLSearchParams({ page });
-  if (search)       params.append("search", search);
-  if (studentClass) params.append("class", studentClass);
+  if (search)      params.append("search", search);
+  if (classroomId) params.append("classroom_id", classroomId);
   return api.get(`/api/students?${params.toString()}`);
 };
 

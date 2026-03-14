@@ -1,23 +1,12 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 
+/**
+ * Obsolète — user_id est maintenant directement dans create_students_table.
+ */
 return new class extends Migration
 {
-    public function up(): void
-    {
-        Schema::table('students', function (Blueprint $table) {
-            $table->foreignId('user_id')->nullable()->constrained('users')->nullOnDelete()->after('id');
-        });
-    }
-
-    public function down(): void
-    {
-        Schema::table('students', function (Blueprint $table) {
-            $table->dropForeignIdFor(\App\Models\User::class);
-            $table->dropColumn('user_id');
-        });
-    }
+    public function up(): void {}
+    public function down(): void {}
 };

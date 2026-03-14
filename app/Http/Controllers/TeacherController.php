@@ -11,10 +11,22 @@ class TeacherController extends Controller
     // GET /api/teachers?search=...&subject=...&page=1
     public function index(Request $request)
     {
+        $user = $request->user();
+
+        // Un élève n'a pas accès à la liste des professeurs
+        if ($user->isStudent()) {
+            return response()->json(['message' => 'Accès refusé.'], 403);
+        }
+
         $search  = $request->query('search');
         $subject = $request->query('subject');
 
-        $teachers = Teacher::select('id','user_id','name','email','phone','subject','status','created_at','updated_at')
+        // Un teacher ne voit que la liste publique (sans données sensibles)
+        $columns = $user->isTeacher()
+            ? ['id', 'name', 'subject']
+            : ['id', 'user_id', 'name', 'email', 'phone', 'subject', 'status', 'created_at', 'updated_at'];
+
+        $teachers = Teacher::select($columns)
             ->latest()
             ->when($search, function ($query) use ($search) {
                 $query->where(function ($q) use ($search) {
@@ -43,8 +55,22 @@ class TeacherController extends Controller
     }
 
     // GET /api/teachers/{id}
-    public function show(Teacher $teacher)
+    public function show(Request $request, Teacher $teacher)
     {
+        $user = $request->user();
+
+        if ($user->isStudent()) {
+            return response()->json(['message' => 'Accès refusé.'], 403);
+        }
+
+        // Un teacher ne voit que son propre profil complet, les autres sont résumés
+        if ($user->isTeacher()) {
+            $self = Teacher::where('user_id', $user->id)->first();
+            if (! $self || $self->id !== $teacher->id) {
+                return response()->json(['id' => $teacher->id, 'name' => $teacher->name, 'subject' => $teacher->subject]);
+            }
+        }
+
         return response()->json($teacher);
     }
 

@@ -9,7 +9,7 @@ const SUBJECTS = ["Maths", "Physique", "Chimie", "Français", "Histoire", "Angla
 
 export default function TeachersList() {
   const navigate = useNavigate();
-  const { isAdmin } = useRole();
+  const { canManageAcademics: isAdmin } = useRole();
   const [teachers, setTeachers]         = useState([]);
   const [loading, setLoading]           = useState(true);
   const [error, setError]               = useState("");

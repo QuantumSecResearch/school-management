@@ -24,10 +24,41 @@ class User extends Authenticatable
         'role',
     ];
 
-    // Helpers de rôle
-    public function isAdmin(): bool   { return $this->role === 'admin'; }
-    public function isTeacher(): bool { return $this->role === 'teacher'; }
-    public function isStudent(): bool { return $this->role === 'student'; }
+    // ── Helpers de rôle — rôles simples ─────────────────────
+    public function isSuperAdmin(): bool    { return $this->role === 'super_admin'; }
+    public function isDirector(): bool      { return $this->role === 'director'; }
+    public function isSchoolAdmin(): bool   { return $this->role === 'school_admin'; }
+    public function isFinanceManager(): bool{ return $this->role === 'finance_manager'; }
+    public function isTeacher(): bool       { return $this->role === 'teacher'; }
+    public function isStudent(): bool       { return $this->role === 'student'; }
+
+    /** @deprecated Utiliser isSuperAdmin() — conservé pour compatibilité descendante */
+    public function isAdmin(): bool         { return $this->role === 'admin' || $this->isSuperAdmin(); }
+
+    /**
+     * Vrai pour tout rôle ayant des droits d'administration élargie.
+     * Remplace les vérifications isAdmin() dans les controllers.
+     */
+    public function isAdminLike(): bool
+    {
+        return in_array($this->role, ['admin', 'super_admin', 'school_admin', 'finance_manager', 'director']);
+    }
+
+    /**
+     * Vrai pour les rôles qui gèrent la scolarité (étudiants, profs, classes, EDT).
+     */
+    public function canManageAcademics(): bool
+    {
+        return in_array($this->role, ['admin', 'super_admin', 'school_admin']);
+    }
+
+    /**
+     * Vrai pour les rôles qui gèrent les finances (factures, paiements).
+     */
+    public function canManageFinance(): bool
+    {
+        return in_array($this->role, ['admin', 'super_admin', 'finance_manager']);
+    }
 
     // Relation : un user peut être lié à un Teacher
     public function teacher()

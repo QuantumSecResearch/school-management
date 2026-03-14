@@ -50,7 +50,13 @@ export default function ClassroomEdit() {
       await updateClassroom(id, values);
       navigate("/classrooms");
     } catch (error) {
-      setServerError(error.response?.data?.message || "Erreur.");
+      const data = error.response?.data;
+      if (data?.errors) {
+        const msgs = Object.values(data.errors).flat().join(" — ");
+        setServerError(msgs);
+      } else {
+        setServerError(data?.message || "Erreur.");
+      }
     } finally {
       setLoading(false);
     }
@@ -99,7 +105,13 @@ export default function ClassroomEdit() {
         {serverError && <p className="text-sm text-red-500 bg-red-50 border border-red-200 rounded p-3">{serverError}</p>}
         {classroom && (
           <ClassroomForm
-            defaultValues={{ name: classroom.name, level: classroom.level, year: classroom.year }}
+            defaultValues={{
+              name:          classroom.name,
+              stream_id:     String(classroom.stream_id ?? ""),
+              academic_year: classroom.academic_year ?? "2025-2026",
+              capacity:      classroom.capacity ?? 35,
+            }}
+            initialLevelId={String(classroom.stream?.school_level?.id ?? "")}
             onSubmit={handleSubmit}
             loading={loading}
             submitLabel="Enregistrer les modifications"

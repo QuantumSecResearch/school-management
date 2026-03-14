@@ -6,7 +6,7 @@ import { useRole } from "@/context/useRole";
 
 export default function ClassroomsList() {
   const navigate = useNavigate();
-  const { isAdmin } = useRole();
+  const { canManageAcademics: isAdmin } = useRole();
   const [classrooms, setClassrooms] = useState([]);
   const [loading, setLoading]       = useState(true);
   const [error, setError]           = useState("");
@@ -56,7 +56,9 @@ export default function ClassroomsList() {
               <div className="flex items-start justify-between">
                 <div>
                   <h2 className="text-lg font-semibold">{classroom.name}</h2>
-                  <p className="text-sm text-muted-foreground">{classroom.level} — {classroom.year}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {classroom.stream?.school_level?.name ?? "—"} — {classroom.academic_year}
+                  </p>
                 </div>
                 <span className="rounded-full bg-primary/10 text-primary px-2 py-0.5 text-xs font-medium">
                   {classroom.students_count} élève{classroom.students_count !== 1 ? "s" : ""}

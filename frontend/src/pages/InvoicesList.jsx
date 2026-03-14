@@ -4,6 +4,7 @@ import { getStudents } from "@/api/students";
 import { getClassrooms } from "@/api/classrooms";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useRole } from "@/context/useRole";
 
 const STATUS_LABEL = { paid: "Payée", pending: "En attente", overdue: "En retard" };
 const STATUS_COLOR = {
@@ -13,6 +14,7 @@ const STATUS_COLOR = {
 };
 
 export default function InvoicesList() {
+  const { canManageFinance: isAdmin } = useRole();
   const [invoices, setInvoices]   = useState([]);
   const [stats, setStats]         = useState(null);
   const [students, setStudents]   = useState([]);
@@ -120,7 +122,10 @@ export default function InvoicesList() {
 
       {/* ── Onglets ── */}
       <div className="flex gap-2 border-b">
-        {[["list","📋 Liste"], ["add","+ Facture individuelle"], ["bulk","+ Facture en masse"]].map(([key, label]) => (
+        {[
+          ["list", "📋 Liste"],
+          ...(isAdmin ? [["add", "+ Facture individuelle"], ["bulk", "+ Facture en masse"]] : []),
+        ].map(([key, label]) => (
           <button key={key} onClick={() => setTab(key)}
             className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
               tab === key ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
@@ -176,16 +181,18 @@ export default function InvoicesList() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex gap-2">
-                          {inv.status !== "paid" && (
+                          {isAdmin && inv.status !== "paid" && (
                             <button onClick={() => handleMarkPaid(inv.id)}
                               className="text-xs text-green-600 hover:underline font-medium">
                               ✅ Marquer payé
                             </button>
                           )}
-                          <button onClick={() => handleDelete(inv.id)}
-                            className="text-xs text-red-500 hover:underline">
-                            Supprimer
-                          </button>
+                          {isAdmin && (
+                            <button onClick={() => handleDelete(inv.id)}
+                              className="text-xs text-red-500 hover:underline">
+                              Supprimer
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>

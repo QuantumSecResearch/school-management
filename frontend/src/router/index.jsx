@@ -21,30 +21,63 @@ import Login from "../pages/Login";
 import Register from "../pages/Register";
 import NotFound from "../pages/NotFound";
 import ProtectedRoute from "../components/ProtectedRoute";
+import RoleRoute from "../components/RoleRoute";
+
+// Rôles "scolarité" : admin legacy + super_admin + school_admin + director (lecture)
+const ACADEMIC_ROLES    = ["admin", "super_admin", "school_admin", "director"];
+const ACADEMIC_WRITE    = ["admin", "super_admin", "school_admin"];
+const FINANCE_ROLES     = ["admin", "super_admin", "finance_manager", "student"];
+const GRADES_ROLES      = ["admin", "super_admin", "school_admin", "teacher"];
+const SCHEDULE_VIEW     = ["admin", "super_admin", "school_admin", "director", "teacher", "student"];
+const SCHEDULE_WRITE    = ["admin", "super_admin", "school_admin"];
 
 export const router = createBrowserRouter([
   {
     element: <Layout />,
     children: [
       { path: "/", element: <Home /> },
-      { path: "/login", element: <Login /> },
+      { path: "/login",    element: <Login /> },
       { path: "/register", element: <Register /> },
-      { path: "/dashboard",              element: <ProtectedRoute><Dashboard /></ProtectedRoute> },
-      { path: "/grades",                  element: <ProtectedRoute><GradesManage /></ProtectedRoute> },
-      { path: "/schedule",                element: <ProtectedRoute><ScheduleView /></ProtectedRoute> },
-      { path: "/schedule/manage",         element: <ProtectedRoute><ScheduleManage /></ProtectedRoute> },
-      { path: "/students",               element: <ProtectedRoute><Users /></ProtectedRoute> },
-      { path: "/students/create",        element: <ProtectedRoute><StudentCreate /></ProtectedRoute> },
-      { path: "/students/:id/edit",      element: <ProtectedRoute><StudentEdit /></ProtectedRoute> },
-      { path: "/students/:id/grades",    element: <ProtectedRoute><StudentGrades /></ProtectedRoute> },
-      { path: "/teachers",            element: <ProtectedRoute><TeachersList /></ProtectedRoute> },
-      { path: "/teachers/create",     element: <ProtectedRoute><TeacherCreate /></ProtectedRoute> },
-      { path: "/teachers/:id/edit",   element: <ProtectedRoute><TeacherEdit /></ProtectedRoute> },
-      { path: "/classrooms",           element: <ProtectedRoute><ClassroomsList /></ProtectedRoute> },
-      { path: "/classrooms/create",    element: <ProtectedRoute><ClassroomCreate /></ProtectedRoute> },
-      { path: "/classrooms/:id",       element: <ProtectedRoute><ClassroomShow /></ProtectedRoute> },
-      { path: "/classrooms/:id/edit",  element: <ProtectedRoute><ClassroomEdit /></ProtectedRoute> },
-      { path: "/invoices",             element: <ProtectedRoute><InvoicesList /></ProtectedRoute> },
+
+      // Accessible à tous les rôles connectés
+      { path: "/dashboard", element: <ProtectedRoute><Dashboard /></ProtectedRoute> },
+      { path: "/schedule",  element: <RoleRoute roles={SCHEDULE_VIEW}><ScheduleView /></RoleRoute> },
+
+      // Notes : super_admin + school_admin + teacher + admin
+      {
+        path: "/grades",
+        element: <RoleRoute roles={GRADES_ROLES}><GradesManage /></RoleRoute>,
+      },
+      {
+        path: "/students/:id/grades",
+        element: <ProtectedRoute><StudentGrades /></ProtectedRoute>,
+      },
+
+      // Emploi du temps (gestion) : écriture académique
+      {
+        path: "/schedule/manage",
+        element: <RoleRoute roles={SCHEDULE_WRITE}><ScheduleManage /></RoleRoute>,
+      },
+
+      // Élèves : lecture académique + teacher, écriture académique
+      { path: "/students",          element: <RoleRoute roles={[...ACADEMIC_ROLES, "teacher"]}><Users /></RoleRoute> },
+      { path: "/students/create",   element: <RoleRoute roles={ACADEMIC_WRITE}><StudentCreate /></RoleRoute> },
+      { path: "/students/:id/edit", element: <RoleRoute roles={ACADEMIC_WRITE}><StudentEdit /></RoleRoute> },
+
+      // Professeurs : lecture académique, écriture académique
+      { path: "/teachers",          element: <RoleRoute roles={ACADEMIC_ROLES}><TeachersList /></RoleRoute> },
+      { path: "/teachers/create",   element: <RoleRoute roles={ACADEMIC_WRITE}><TeacherCreate /></RoleRoute> },
+      { path: "/teachers/:id/edit", element: <RoleRoute roles={ACADEMIC_WRITE}><TeacherEdit /></RoleRoute> },
+
+      // Classes : lecture académique + teacher, écriture académique
+      { path: "/classrooms",          element: <RoleRoute roles={[...ACADEMIC_ROLES, "teacher"]}><ClassroomsList /></RoleRoute> },
+      { path: "/classrooms/create",   element: <RoleRoute roles={ACADEMIC_WRITE}><ClassroomCreate /></RoleRoute> },
+      { path: "/classrooms/:id",      element: <RoleRoute roles={[...ACADEMIC_ROLES, "teacher"]}><ClassroomShow /></RoleRoute> },
+      { path: "/classrooms/:id/edit", element: <RoleRoute roles={ACADEMIC_WRITE}><ClassroomEdit /></RoleRoute> },
+
+      // Factures : finance + admin + student (student voit les siennes via le backend)
+      { path: "/invoices", element: <RoleRoute roles={FINANCE_ROLES}><InvoicesList /></RoleRoute> },
+
       { path: "*", element: <NotFound /> },
     ],
   },

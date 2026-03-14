@@ -4,11 +4,13 @@ import { getStudents } from "@/api/students";
 import { addGrade, getGrades, deleteGrade } from "@/api/grades";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useRole } from "@/context/useRole";
 
 const TYPES    = ["contrôle", "examen", "devoir"];
 const SUBJECTS = ["Maths", "Physique", "Chimie", "Français", "Histoire", "Anglais", "SVT", "Philosophie"];
 
 export default function GradesManage() {
+  const { canManageAcademics: isAdmin, isTeacher } = useRole();
   const [classrooms, setClassrooms]     = useState([]);
   const [students, setStudents]         = useState([]);
   const [recentGrades, setRecentGrades] = useState([]);
@@ -184,10 +186,12 @@ export default function GradesManage() {
                     <td className="px-4 py-3 capitalize text-muted-foreground">{g.type}</td>
                     <td className="px-4 py-3 text-muted-foreground">{new Date(g.date).toLocaleDateString("fr-FR")}</td>
                     <td className="px-4 py-3">
-                      <button onClick={() => handleDelete(g.id)}
-                        className="text-xs text-red-500 hover:underline">
-                        Supprimer
-                      </button>
+                      {(isAdmin || isTeacher) && (
+                        <button onClick={() => handleDelete(g.id)}
+                          className="text-xs text-red-500 hover:underline">
+                          Supprimer
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}

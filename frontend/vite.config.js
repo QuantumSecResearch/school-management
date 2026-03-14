@@ -11,4 +11,7 @@ export default defineConfig({
     },
   },
   plugins: [react(), tailwindcss()],
+  server: {
+    port: 3000, // doit correspondre à FRONTEND_URL dans .env Laravel
+  },
 })

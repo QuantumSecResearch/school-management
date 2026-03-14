@@ -3,16 +3,36 @@
 namespace App\Http\Controllers;
 
 use App\Models\Classroom;
-use App\Models\Teacher;
+use App\Models\Enrollment;
 use Illuminate\Http\Request;
 
 class ClassroomController extends Controller
 {
-    // GET /api/classrooms — liste avec nb d'étudiants et profs
+    private function currentAcademicYear(): string
+    {
+        $month = (int) date('n');
+        $year  = (int) date('Y');
+        return $month >= 9
+            ? "{$year}-" . ($year + 1)
+            : ($year - 1) . "-{$year}";
+    }
+
+    private function formatStudents(Classroom $classroom): \Illuminate\Support\Collection
+    {
+        return $classroom->students()
+            ->get(['students.id', 'students.first_name', 'students.last_name', 'students.email'])
+            ->map(fn($s) => [
+                'id'    => $s->id,
+                'name'  => $s->full_name,
+                'email' => $s->email ?? '',
+            ]);
+    }
+
+    // GET /api/classrooms
     public function index()
     {
         $classrooms = Classroom::withCount('students')
-            ->with('teachers:id,name,subject')
+            ->with(['stream.schoolLevel', 'teachers:id,name,subject'])
             ->latest()
             ->get();
 
@@ -23,35 +43,41 @@ class ClassroomController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'name'  => 'required|string|max:100',
-            'level' => 'required|string|max:100',
-            'year'  => 'required|string|max:20',
+            'name'          => 'required|string|max:100',
+            'stream_id'     => 'required|exists:streams,id',
+            'academic_year' => 'required|string|max:20',
+            'capacity'      => 'nullable|integer|min:1|max:200',
         ]);
 
-        return response()->json(Classroom::create($validated), 201);
+        $classroom = Classroom::create($validated);
+        $classroom->load('stream.schoolLevel');
+
+        return response()->json($classroom, 201);
     }
 
-    // GET /api/classrooms/{id} — classe + ses étudiants + ses profs
+    // GET /api/classrooms/{id}
     public function show(Classroom $classroom)
     {
-        $classroom->load([
-            'students:id,name,email,classroom_id',
-            'teachers:id,name,subject',
-        ]);
+        $classroom->load(['stream.schoolLevel', 'teachers:id,name,subject']);
+        $students = $this->formatStudents($classroom);
 
-        return response()->json($classroom);
+        return response()->json(
+            array_merge($classroom->toArray(), ['students' => $students])
+        );
     }
 
     // PUT /api/classrooms/{id}
     public function update(Request $request, Classroom $classroom)
     {
         $validated = $request->validate([
-            'name'  => 'required|string|max:100',
-            'level' => 'required|string|max:100',
-            'year'  => 'required|string|max:20',
+            'name'          => 'required|string|max:100',
+            'stream_id'     => 'required|exists:streams,id',
+            'academic_year' => 'required|string|max:20',
+            'capacity'      => 'nullable|integer|min:1|max:200',
         ]);
 
         $classroom->update($validated);
+        $classroom->load('stream.schoolLevel');
 
         return response()->json($classroom);
     }
@@ -60,7 +86,6 @@ class ClassroomController extends Controller
     public function destroy(Classroom $classroom)
     {
         $classroom->delete();
-
         return response()->json(null, 204);
     }
 
@@ -81,10 +106,7 @@ class ClassroomController extends Controller
     }
 
     // POST /api/classrooms/{id}/students
-    // Affecter des étudiants à une classe
-    // Body: { "student_ids": [1, 2, 3] }
-    // Met à jour classroom_id sur chaque étudiant sélectionné
-    // Retire les étudiants qui étaient dans cette classe mais ne sont plus dans la liste
+    // Affecte des étudiants via le système d'enrollments (pas classroom_id sur students)
     public function assignStudents(Request $request, Classroom $classroom)
     {
         $request->validate([
@@ -92,18 +114,49 @@ class ClassroomController extends Controller
             'student_ids.*' => 'exists:students,id',
         ]);
 
-        // Retire cette classe des étudiants qui en faisaient partie
-        $classroom->students()->update(['classroom_id' => null]);
+        $year   = $this->currentAcademicYear();
+        $newIds = collect($request->student_ids);
 
-        // Affecte les étudiants sélectionnés à cette classe
-        if (!empty($request->student_ids)) {
-            \App\Models\Student::whereIn('id', $request->student_ids)
-                ->update(['classroom_id' => $classroom->id]);
+        // IDs actuellement inscrits dans cette classe (actifs)
+        $currentIds = Enrollment::where('classroom_id', $classroom->id)
+            ->where('academic_year', $year)
+            ->where('status', 'active')
+            ->pluck('student_id');
+
+        // Retirer les étudiants qui ne sont plus dans la liste
+        $toRemove = $currentIds->diff($newIds);
+        if ($toRemove->isNotEmpty()) {
+            Enrollment::where('classroom_id', $classroom->id)
+                ->whereIn('student_id', $toRemove)
+                ->where('academic_year', $year)
+                ->where('status', 'active')
+                ->update(['status' => 'inactive']);
+        }
+
+        // Ajouter les nouveaux étudiants
+        $toAdd = $newIds->diff($currentIds);
+        foreach ($toAdd as $studentId) {
+            // Désactiver tout enrollment actif dans une autre classe pour cette année
+            Enrollment::where('student_id', $studentId)
+                ->where('academic_year', $year)
+                ->where('status', 'active')
+                ->where('classroom_id', '!=', $classroom->id)
+                ->update(['status' => 'inactive']);
+
+            // Créer ou réactiver l'enrollment dans cette classe
+            Enrollment::updateOrCreate(
+                [
+                    'student_id'    => $studentId,
+                    'classroom_id'  => $classroom->id,
+                    'academic_year' => $year,
+                ],
+                ['status' => 'active']
+            );
         }
 
         return response()->json([
             'message'  => 'Étudiants affectés avec succès.',
-            'students' => $classroom->students()->get(['id', 'name', 'email']),
+            'students' => $this->formatStudents($classroom),
         ]);
     }
 }

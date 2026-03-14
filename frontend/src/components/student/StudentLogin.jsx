@@ -35,8 +35,9 @@ export default function StudentLogin() {
     setServerError("");
     setLoading(true);
     try {
-      await login(values.email, values.password);
-      navigate("/students");
+      const loggedUser = await login(values.email, values.password);
+      // Redirige vers le dashboard — la page Dashboard affiche la bonne vue selon le rôle
+      navigate("/dashboard");
     } catch (error) {
       const message = error.response?.data?.message || "Email ou mot de passe incorrect.";
       setServerError(message);

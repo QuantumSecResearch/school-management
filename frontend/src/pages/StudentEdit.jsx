@@ -51,11 +51,15 @@ export default function StudentEdit() {
       {student && (
         <StudentForm
           defaultValues={{
-            name:       student.name,
-            email:      student.email,
-            phone:      student.phone ?? "",
-            class:      student.class,
-            birth_date: student.birth_date ?? "",
+            first_name:   student.first_name ?? "",
+            last_name:    student.last_name  ?? "",
+            cne:          student.cne        ?? "",
+            gender:       student.gender     ?? "M",
+            birth_date:   student.birth_date ?? "",
+            phone:        student.phone      ?? "",
+            email:        student.email      ?? "",
+            address:      student.address    ?? "",
+            classroom_id: String(student.classroom_id ?? ""),
           }}
           onSubmit={handleSubmit}
           loading={loading}

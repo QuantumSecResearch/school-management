@@ -5,9 +5,11 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import logo from "@/assets/react.svg";
 import { useAuth } from "@/context/AuthContext";
+import { useRole } from "@/context/useRole";
 
 export default function Layout() {
   const { user, logout } = useAuth();
+  const { isAdmin, isTeacher, isStudent, canManageAcademics, canManageFinance, isAdminLike, isDirector, role } = useRole();
   const navigate = useNavigate();
 
   const [theme, setTheme] = useState(() => {
@@ -25,6 +27,19 @@ export default function Layout() {
     await logout();
     navigate("/login");
   }
+
+  const navLink = (to, label, end = false) => (
+    <NavLink
+      key={to}
+      to={to}
+      end={end}
+      className={({ isActive }) =>
+        cn("rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
+          isActive ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground")
+      }>
+      {label}
+    </NavLink>
+  );
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -46,67 +61,34 @@ export default function Layout() {
           </NavLink>
 
           <nav className="flex items-center gap-2 rounded-xl border bg-card/70 p-1.5 shadow-sm">
-            <NavLink
-              to="/"
-              end
-              className={({ isActive }) =>
-                cn("rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
-                  isActive ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground")
-              }>
-              Home
-            </NavLink>
+            {navLink("/", "Home", true)}
 
             {user ? (
-              // Connecté
               <>
-                <NavLink to="/dashboard" className={({ isActive }) =>
-                  cn("rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
-                    isActive ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground")
-                }>Dashboard</NavLink>
-                <NavLink to="/students" className={({ isActive }) =>
-                  cn("rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
-                    isActive ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground")
-                }>Students</NavLink>
-                <NavLink to="/teachers" className={({ isActive }) =>
-                  cn("rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
-                    isActive ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground")
-                }>Teachers</NavLink>
-                <NavLink to="/schedule" className={({ isActive }) =>
-                  cn("rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
-                    isActive ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground")
-                }>Emploi</NavLink>
-                <NavLink to="/grades" className={({ isActive }) =>
-                  cn("rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
-                    isActive ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground")
-                }>Notes</NavLink>
-                <NavLink to="/classrooms" className={({ isActive }) =>
-                  cn("rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
-                    isActive ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground")
-                }>Classes</NavLink>
-                <NavLink to="/invoices" className={({ isActive }) =>
-                  cn("rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
-                    isActive ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground")
-                }>Paiements</NavLink>
+                {navLink("/dashboard", "Dashboard")}
+
+                {/* Élèves : scolarité + teacher + director */}
+                {(canManageAcademics || isTeacher || isDirector) && navLink("/students", "Élèves")}
+
+                {/* Profs : scolarité + director */}
+                {(canManageAcademics || isDirector) && navLink("/teachers", "Profs")}
+
+                {/* Classes : scolarité + teacher + director */}
+                {(canManageAcademics || isTeacher || isDirector) && navLink("/classrooms", "Classes")}
+
+                {/* Emploi du temps : tous sauf finance_manager (ni student non plus dans l'en-tête) */}
+                {(canManageAcademics || isTeacher || isDirector || isStudent) && navLink("/schedule", "Emploi du temps")}
+
+                {/* Notes : scolarité + teacher */}
+                {(canManageAcademics || isTeacher) && navLink("/grades", "Notes")}
+
+                {/* Factures : finance + student */}
+                {(canManageFinance || isStudent) && navLink("/invoices", "Paiements")}
               </>
             ) : (
-              // Non connecté : afficher Login + Register
               <>
-                <NavLink
-                  to="/login"
-                  className={({ isActive }) =>
-                    cn("rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
-                      isActive ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground")
-                  }>
-                  Login
-                </NavLink>
-                <NavLink
-                  to="/register"
-                  className={({ isActive }) =>
-                    cn("rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
-                      isActive ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground")
-                  }>
-                  Register
-                </NavLink>
+                {navLink("/login", "Login")}
+                {navLink("/register", "Register")}
               </>
             )}
           </nav>
@@ -116,6 +98,9 @@ export default function Layout() {
               <>
                 <span className="text-sm text-muted-foreground hidden sm:block">
                   {user.name}
+                  <span className="ml-1 rounded-full bg-muted px-2 py-0.5 text-xs font-medium opacity-70">
+                    {role}
+                  </span>
                 </span>
                 <Button variant="outline" size="icon" onClick={handleLogout} aria-label="Logout">
                   <LogOut className="h-4 w-4" />

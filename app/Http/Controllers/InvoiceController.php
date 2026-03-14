@@ -11,14 +11,29 @@ class InvoiceController extends Controller
     // GET /api/invoices?status=&student_id=&classroom_id=
     public function index(Request $request)
     {
-        $invoices = Invoice::with('student:id,name,email,classroom_id')
-            ->when($request->status,     fn($q) => $q->where('status', $request->status))
-            ->when($request->student_id, fn($q) => $q->where('student_id', $request->student_id))
-            ->when($request->classroom_id, fn($q) => $q->whereHas('student', fn($s) =>
-                $s->where('classroom_id', $request->classroom_id)
-            ))
-            ->orderBy('due_date')
-            ->get();
+        $user  = $request->user();
+        $query = Invoice::with('student:id,first_name,last_name,email');
+
+        if ($user->isStudent()) {
+            // Un élève ne voit que ses propres factures
+            $studentId = $user->student?->id;
+            if (! $studentId) {
+                return response()->json([]);
+            }
+            $query->where('student_id', $studentId);
+        } elseif ($user->isTeacher() || $user->isSchoolAdmin() || $user->isDirector()) {
+            // enseignants et school_admin n'ont pas accès aux factures
+            return response()->json(['message' => 'Accès refusé.'], 403);
+        } else {
+            // super_admin, finance_manager, admin (legacy) : accès complet avec filtres optionnels
+            $query->when($request->status,       fn($q) => $q->where('status', $request->status))
+                  ->when($request->student_id,   fn($q) => $q->where('student_id', $request->student_id))
+                  ->when($request->classroom_id, fn($q) => $q->whereHas('student.activeEnrollment',
+                      fn($s) => $s->where('classroom_id', $request->classroom_id)
+                  ));
+        }
+
+        $invoices = $query->orderBy('due_date')->get();
 
         // Auto-marquer overdue les factures en retard
         $invoices->each(function ($inv) {
@@ -43,7 +58,7 @@ class InvoiceController extends Controller
         ]);
 
         $invoice = Invoice::create($validated);
-        $invoice->load('student:id,name,email');
+        $invoice->load('student:id,first_name,last_name,email');
 
         return response()->json($invoice, 201);
     }
@@ -58,7 +73,9 @@ class InvoiceController extends Controller
             'due_date'     => 'required|date',
         ]);
 
-        $students = Student::where('classroom_id', $validated['classroom_id'])->get();
+        $students = Student::whereHas('activeEnrollment',
+            fn($q) => $q->where('classroom_id', $validated['classroom_id'])
+        )->get();
 
         $invoices = $students->map(fn($s) => Invoice::create([
             'student_id'  => $s->id,
@@ -91,7 +108,7 @@ class InvoiceController extends Controller
 
         $invoice->update($validated);
 
-        return response()->json($invoice->load('student:id,name,email'));
+        return response()->json($invoice->load('student:id,first_name,last_name,email'));
     }
 
     // DELETE /api/invoices/{invoice}
@@ -102,9 +119,13 @@ class InvoiceController extends Controller
     }
 
     // GET /api/invoices/stats — résumé financier pour le dashboard admin
-    public function stats()
+    public function stats(Request $request)
     {
-        $total    = Invoice::sum('amount');
+        if (! $request->user()->canManageFinance()) {
+            return response()->json(['message' => 'Accès refusé.'], 403);
+        }
+
+        $total   = Invoice::sum('amount');
         $paid     = Invoice::paid()->sum('amount');
         $pending  = Invoice::pending()->sum('amount');
         $overdue  = Invoice::overdue()->sum('amount');

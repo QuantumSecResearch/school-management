@@ -441,9 +441,313 @@ function StudentDashboard() {
 // ══════════════════════════════════════════
 //  WRAPPER — choisit le bon dashboard
 // ══════════════════════════════════════════
+
+// ─── Director Dashboard ───────────────────
+function DirectorDashboard() {
+  const [data, setData]       = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError]     = useState("");
+
+  useEffect(() => {
+    getDashboard()
+      .then((res) => setData(res.data))
+      .catch(() => setError("Impossible de charger le dashboard."))
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) return <p className="py-20 text-center text-muted-foreground">Chargement…</p>;
+  if (error)   return <p className="text-red-500">{error}</p>;
+
+  const { stats, academics, finance } = data;
+
+  return (
+    <div className="space-y-8">
+      <div>
+        <h1 className="text-3xl font-semibold tracking-tight">Tableau de bord Direction</h1>
+        <p className="text-muted-foreground mt-1">Vue stratégique de l'établissement</p>
+      </div>
+
+      {/* KPI école */}
+      <section>
+        <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-3">École</h2>
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+          <StatCard label="Étudiants"   value={stats.students}   color="border-l-blue-500" />
+          <StatCard label="Enseignants" value={stats.teachers}   color="border-l-green-500" />
+          <StatCard label="Classes"     value={stats.classrooms} color="border-l-purple-500" />
+          <StatCard label="Taux d'affectation" value={`${stats.affectation_rate ?? 0}%`} sub="élèves avec classe" color="border-l-orange-500" />
+        </div>
+      </section>
+
+      {/* KPI académiques */}
+      {academics && (
+        <section>
+          <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-3">Académique</h2>
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
+            <StatCard label="Moyenne générale"       value={academics.overall_avg !== null ? `${academics.overall_avg}/20` : "—"} color="border-l-indigo-500" />
+            <StatCard label="Élèves en difficulté"   value={academics.struggling_students ?? 0} sub="moyenne < 10"  color="border-l-red-400" />
+            <StatCard label="Profs sans classe"      value={stats.teachers_without_class ?? 0} sub="non affectés"  color="border-l-yellow-500" />
+          </div>
+        </section>
+      )}
+
+      {/* KPI financiers */}
+      {finance && (
+        <section>
+          <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-3">Finances</h2>
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <StatCard label="Total facturé"  value={`${Number(finance.total_amount).toLocaleString()} MAD`}   color="border-l-slate-400" />
+            <StatCard label="Encaissé"       value={`${Number(finance.paid_amount).toLocaleString()} MAD`}    color="border-l-emerald-500" />
+            <StatCard label="En attente"     value={`${Number(finance.pending_amount).toLocaleString()} MAD`} color="border-l-yellow-500" />
+            <StatCard label="Taux de recouvrement" value={`${finance.recovery_rate ?? 0}%`}                   color="border-l-teal-500" />
+          </div>
+          {finance.overdue_amount > 0 && (
+            <div className="mt-3 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 dark:bg-red-950/30 px-4 py-2.5 text-sm text-red-600 dark:text-red-400">
+              ⚠️ <strong>{Number(finance.overdue_amount).toLocaleString()} MAD</strong> en retard
+            </div>
+          )}
+        </section>
+      )}
+    </div>
+  );
+}
+
+// ─── School Admin Dashboard ───────────────
+function SchoolAdminDashboard() {
+  const [data, setData]       = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError]     = useState("");
+
+  useEffect(() => {
+    getDashboard()
+      .then((res) => setData(res.data))
+      .catch(() => setError("Impossible de charger le dashboard."))
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) return <p className="py-20 text-center text-muted-foreground">Chargement…</p>;
+  if (error)   return <p className="text-red-500">{error}</p>;
+
+  const { stats, classrooms, alerts } = data;
+
+  return (
+    <div className="space-y-8">
+      <div>
+        <h1 className="text-3xl font-semibold tracking-tight">Dashboard Scolarité</h1>
+        <p className="text-muted-foreground mt-1">Gestion académique de l'établissement</p>
+      </div>
+
+      {/* KPI principaux */}
+      <section>
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+          <StatCard label="Étudiants"              value={stats.students}              sub={stats.students_without_class > 0 ? `${stats.students_without_class} sans classe` : "Tous affectés ✅"} color="border-l-blue-500" />
+          <StatCard label="Enseignants"            value={stats.teachers}              sub={stats.teachers_without_class > 0 ? `${stats.teachers_without_class} sans classe` : "Tous affectés ✅"} color="border-l-green-500" />
+          <StatCard label="Classes"                value={stats.classrooms}            color="border-l-purple-500" />
+          <StatCard label="Taux d'affectation"     value={`${stats.affectation_rate ?? 0}%`} sub="élèves avec classe" color="border-l-orange-500" />
+        </div>
+      </section>
+
+      {/* Alertes */}
+      {alerts && (alerts.students_without_class > 0 || alerts.classrooms_without_teacher > 0) && (
+        <section className="space-y-2">
+          {alerts.students_without_class > 0 && (
+            <div className="flex items-center gap-2 rounded-lg border border-yellow-200 bg-yellow-50 dark:bg-yellow-950/30 px-4 py-2.5 text-sm text-yellow-700 dark:text-yellow-400">
+              ⚠️ <strong>{alerts.students_without_class}</strong> étudiant(s) sans classe —{" "}
+              <Link to="/students" className="underline font-medium">Gérer les affectations</Link>
+            </div>
+          )}
+          {alerts.classrooms_without_teacher > 0 && (
+            <div className="flex items-center gap-2 rounded-lg border border-orange-200 bg-orange-50 dark:bg-orange-950/30 px-4 py-2.5 text-sm text-orange-700 dark:text-orange-400">
+              ⚠️ <strong>{alerts.classrooms_without_teacher}</strong> classe(s) sans enseignant —{" "}
+              <Link to="/classrooms" className="underline font-medium">Affecter des profs</Link>
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* Tableau classes */}
+      {classrooms && classrooms.length > 0 && (
+        <section className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold">Classes</h2>
+            <Link to="/classrooms/create" className="text-sm text-primary hover:underline">+ Nouvelle classe</Link>
+          </div>
+          <div className="rounded-lg border overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="bg-muted text-muted-foreground">
+                <tr>
+                  <th className="text-left px-4 py-3 font-medium">Classe</th>
+                  <th className="text-left px-4 py-3 font-medium">Niveau</th>
+                  <th className="text-center px-4 py-3 font-medium">Élèves</th>
+                  <th className="text-left px-4 py-3 font-medium">Enseignants</th>
+                  <th className="text-left px-4 py-3 font-medium">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {classrooms.map((c) => (
+                  <tr key={c.id} className="hover:bg-muted/50 transition-colors">
+                    <td className="px-4 py-3 font-medium">{c.name}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{c.level}</td>
+                    <td className="px-4 py-3 text-center">
+                      <span className={`inline-flex items-center justify-center rounded-full px-2.5 py-0.5 text-xs font-medium ${c.students_count === 0 ? "bg-red-100 text-red-700" : "bg-blue-100 text-blue-700"}`}>
+                        {c.students_count}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      {c.teachers.length === 0
+                        ? <span className="text-xs text-muted-foreground italic">Aucun</span>
+                        : <div className="flex flex-wrap gap-1">{c.teachers.map((t) => (
+                            <span key={t.id} className="rounded-full bg-muted px-2 py-0.5 text-xs">{t.name}</span>
+                          ))}</div>}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex gap-2">
+                        <Link to={`/classrooms/${c.id}`}      className="text-xs text-primary hover:underline">Voir</Link>
+                        <Link to={`/classrooms/${c.id}/edit`} className="text-xs text-muted-foreground hover:underline">Modifier</Link>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+    </div>
+  );
+}
+
+// ─── Finance Manager Dashboard ────────────
+function FinanceDashboard() {
+  const [data, setData]       = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError]     = useState("");
+
+  useEffect(() => {
+    getDashboard()
+      .then((res) => setData(res.data))
+      .catch(() => setError("Impossible de charger le dashboard."))
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) return <p className="py-20 text-center text-muted-foreground">Chargement…</p>;
+  if (error)   return <p className="text-red-500">{error}</p>;
+
+  const { invoices, recent_payments, unpaid_students, by_level } = data;
+
+  return (
+    <div className="space-y-8">
+      <div>
+        <h1 className="text-3xl font-semibold tracking-tight">Dashboard Finances</h1>
+        <p className="text-muted-foreground mt-1">Suivi de la facturation et des paiements</p>
+      </div>
+
+      {/* KPI montants */}
+      <section>
+        <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-3">Montants</h2>
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+          <StatCard label="Total facturé"  value={`${Number(invoices?.total_amount ?? 0).toLocaleString()} MAD`}   color="border-l-slate-400" />
+          <StatCard label="Encaissé"       value={`${Number(invoices?.paid_amount ?? 0).toLocaleString()} MAD`}    color="border-l-emerald-500" />
+          <StatCard label="En attente"     value={`${Number(invoices?.pending_amount ?? 0).toLocaleString()} MAD`} color="border-l-yellow-500" />
+          <StatCard label="En retard"      value={`${Number(invoices?.overdue_amount ?? 0).toLocaleString()} MAD`} color="border-l-red-500" />
+        </div>
+      </section>
+
+      {/* KPI nombre de factures */}
+      <section>
+        <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-3">Factures</h2>
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+          <StatCard label="Total"       value={invoices?.total ?? 0}   color="border-l-slate-400" />
+          <StatCard label="Payées"      value={invoices?.paid ?? 0}    color="border-l-emerald-500" />
+          <StatCard label="En attente"  value={invoices?.pending ?? 0} color="border-l-yellow-500" />
+          <StatCard label="En retard"   value={invoices?.overdue ?? 0} color="border-l-red-500" />
+        </div>
+      </section>
+
+      {/* Taux de recouvrement */}
+      <section className="flex items-center gap-4 rounded-xl border bg-card p-5 shadow-sm">
+        <div>
+          <p className="text-sm text-muted-foreground">Taux de recouvrement</p>
+          <p className="text-5xl font-bold text-teal-600">{invoices?.recovery_rate ?? 0}%</p>
+        </div>
+        <div className="flex-1 h-3 rounded-full bg-muted overflow-hidden">
+          <div
+            className="h-3 rounded-full bg-teal-500 transition-all"
+            style={{ width: `${invoices?.recovery_rate ?? 0}%` }}
+          />
+        </div>
+        <Link to="/invoices" className="text-sm text-primary hover:underline whitespace-nowrap">Voir toutes →</Link>
+      </section>
+
+      {/* Derniers paiements */}
+      {recent_payments && recent_payments.length > 0 && (
+        <section className="space-y-3">
+          <h2 className="text-xl font-semibold">Derniers paiements</h2>
+          <div className="rounded-lg border overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="bg-muted text-muted-foreground">
+                <tr>
+                  <th className="text-left px-4 py-2 font-medium">Étudiant</th>
+                  <th className="text-left px-4 py-2 font-medium">Description</th>
+                  <th className="text-right px-4 py-2 font-medium">Montant</th>
+                  <th className="text-center px-4 py-2 font-medium">Date paiement</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {recent_payments.map((p) => (
+                  <tr key={p.id} className="hover:bg-muted/50">
+                    <td className="px-4 py-2">{p.student}</td>
+                    <td className="px-4 py-2 text-muted-foreground">{p.description}</td>
+                    <td className="px-4 py-2 text-right font-mono font-medium text-emerald-600">{Number(p.amount).toLocaleString()} MAD</td>
+                    <td className="px-4 py-2 text-center text-muted-foreground">{p.paid_at}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+
+      {/* Principaux impayés */}
+      {unpaid_students && unpaid_students.length > 0 && (
+        <section className="space-y-3">
+          <h2 className="text-xl font-semibold">Principaux impayés</h2>
+          <div className="rounded-lg border overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="bg-muted text-muted-foreground">
+                <tr>
+                  <th className="text-left px-4 py-2 font-medium">Étudiant</th>
+                  <th className="text-right px-4 py-2 font-medium">Montant dû</th>
+                  <th className="text-center px-4 py-2 font-medium">Factures impayées</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {unpaid_students.map((u) => (
+                  <tr key={u.student_id} className="hover:bg-muted/50">
+                    <td className="px-4 py-2">{u.student_name}</td>
+                    <td className="px-4 py-2 text-right font-mono font-medium text-red-600">{Number(u.total_due).toLocaleString()} MAD</td>
+                    <td className="px-4 py-2 text-center">{u.invoice_count}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════
+//  WRAPPER — choisit le bon dashboard
+// ══════════════════════════════════════════
 export default function Dashboard() {
-  const { isAdmin, isStudent } = useRole();
-  if (isAdmin)   return <AdminDashboard />;
-  if (isStudent) return <StudentDashboard />;
+  const { isSuperAdmin, isAdmin, isDirector, isSchoolAdmin, isFinanceManager, isStudent } = useRole();
+
+  // super_admin et admin legacy → AdminDashboard (vue complète)
+  if (isSuperAdmin || isAdmin)  return <AdminDashboard />;
+  if (isDirector)               return <DirectorDashboard />;
+  if (isSchoolAdmin)            return <SchoolAdminDashboard />;
+  if (isFinanceManager)         return <FinanceDashboard />;
+  if (isStudent)                return <StudentDashboard />;
   return <TeacherDashboard />;
 }

@@ -12,7 +12,7 @@ export default function ScheduleView() {
   const [schedules, setSchedules]     = useState([]);
   const [selectedClass, setSelectedClass] = useState("");
   const [loading, setLoading]         = useState(false);
-  const { isAdmin } = useRole();
+  const { canManageAcademics: isAdmin } = useRole();
 
   useEffect(() => {
     getClassrooms().then((r) => {
